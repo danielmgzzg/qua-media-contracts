@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Qua Media Pipeline HTTP API
+  version: "1.0.0"
+  description: |
+    Minimal HTTP surface for the Qua media pipeline. Today only `/health` is
+    served; richer REST endpoints (CAS browser, export download, etc.) will be
+    added here as they are introduced. The bulk of the protocol is the
+    WebSocket contract — see `schemas/v1/ws/`.
+
+servers:
+  - url: http://localhost:3001
+    description: Mock (UI repo)
+  - url: http://localhost:8080
+    description: Real backend (qua-media-rs)
+
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      description: Returns 200 when the server has finished startup.
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+
+  /ws:
+    get:
+      summary: WebSocket upgrade endpoint
+      description: |
+        Upgrade HTTP/1.1 -> WebSocket. The wire protocol is defined by the
+        JSON Schemas in `schemas/v1/ws/`:
+          - server -> client: `server.schema.json` (tagged union on `type`)
+          - client -> server: `client.schema.json` (tagged union on `type`)
+        OpenAPI does not model WebSocket frames; consult the JSON Schemas.
+      responses:
+        "101":
+          description: Switching Protocols

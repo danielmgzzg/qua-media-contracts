@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: packages/ts/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install JS deps
+        run: cd packages/ts && npm ci
+
+      - name: Generate TypeScript types
+        run: make gen-ts
+
+      - name: Validate schemas + sample messages
+        run: make validate
+
+      - name: Build Rust crate (runs typify codegen)
+        run: make gen-rust
+
+      - name: Type-check generated TS
+        run: cd packages/ts && npx tsc --noEmit
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path crates/qua-media-contracts/Cargo.toml

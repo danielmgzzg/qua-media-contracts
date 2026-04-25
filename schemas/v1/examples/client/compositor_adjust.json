@@ -1,0 +1,7 @@
+{
+  "type": "compositor_adjust",
+  "run_id": "r1",
+  "take_id": "t1",
+  "key_color": "#00ff00",
+  "similarity": 0.42
+}

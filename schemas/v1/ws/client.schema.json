@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.qua.media/v1/ws/client.schema.json",
+  "title": "ClientMessage",
+  "description": "Tagged union of every message the client may send to the server over the WebSocket. Discriminated on `type`.",
+
+  "oneOf": [
+    { "$ref": "#/$defs/SubmitReview" },
+    { "$ref": "#/$defs/StartAllRemaining" },
+    { "$ref": "#/$defs/RerunFailed" },
+    { "$ref": "#/$defs/CompositorAdjust" },
+    { "$ref": "#/$defs/GradeAdjust" },
+    { "$ref": "#/$defs/EyeAnchorAdjust" },
+    { "$ref": "#/$defs/MasterAdjust" },
+    { "$ref": "#/$defs/CropAdjust" },
+    { "$ref": "#/$defs/SubtitleStyleAdjust" },
+    { "$ref": "#/$defs/AlignmentEditProposed" }
+  ],
+
+  "$defs": {
+    "SubmitReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "stage", "decision", "actor", "notes"],
+      "properties": {
+        "type": { "const": "submit_review" },
+        "run_id": { "type": "string" },
+        "stage": { "type": "string" },
+        "decision": { "type": "string", "enum": ["approved", "request_revision"] },
+        "actor": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "StartAllRemaining": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "campaign_id", "episode_ids"],
+      "properties": {
+        "type": { "const": "start_all_remaining" },
+        "campaign_id": { "type": "string" },
+        "episode_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "RerunFailed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "campaign_id", "episode_ids"],
+      "properties": {
+        "type": { "const": "rerun_failed" },
+        "campaign_id": { "type": "string" },
+        "episode_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "CompositorAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "take_id"],
+      "properties": {
+        "type": { "const": "compositor_adjust" },
+        "run_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "key_color": { "type": "string" },
+        "similarity": { "type": "number" },
+        "smoothness": { "type": "number" },
+        "spill_suppression": { "type": "number" },
+        "background_key": { "type": "string" }
+      }
+    },
+
+    "GradeAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "take_id", "adjustments"],
+      "properties": {
+        "type": { "const": "grade_adjust" },
+        "run_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "adjustments": { "$ref": "../domain.schema.json#/$defs/GradeAdjustments" }
+      }
+    },
+
+    "EyeAnchorAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "take_id", "anchor_x", "anchor_y"],
+      "properties": {
+        "type": { "const": "eye_anchor_adjust" },
+        "run_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "anchor_x": { "type": "number" },
+        "anchor_y": { "type": "number" },
+        "smoothing_factor": { "type": "number" },
+        "stabilization_window_frames": { "type": "integer" }
+      }
+    },
+
+    "MasterAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "take_id"],
+      "properties": {
+        "type": { "const": "master_adjust" },
+        "run_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "target_lufs": { "type": "number" },
+        "noise_reduction_pct": { "type": "number" },
+        "eq": { "$ref": "../domain.schema.json#/$defs/EqCurve" }
+      }
+    },
+
+    "CropAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "format", "crop"],
+      "properties": {
+        "type": { "const": "crop_adjust" },
+        "run_id": { "type": "string" },
+        "format": { "type": "string" },
+        "crop": { "$ref": "../domain.schema.json#/$defs/CropRegion" }
+      }
+    },
+
+    "SubtitleStyleAdjust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "run_id", "format", "style"],
+      "properties": {
+        "type": { "const": "subtitle_style_adjust" },
+        "run_id": { "type": "string" },
+        "format": { "type": "string" },
+        "style": { "$ref": "../domain.schema.json#/$defs/SubtitleStyle" }
+      }
+    },
+
+    "AlignmentEditProposed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "run_id", "segment_id", "take_id", "script_block_id",
+        "text", "speaker", "start_ms", "end_ms", "confidence"
+      ],
+      "properties": {
+        "type": { "const": "alignment_edit_proposed" },
+        "run_id": { "type": "string" },
+        "segment_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "script_block_id": { "type": "string" },
+        "text": { "type": "string" },
+        "speaker": { "type": "string" },
+        "start_ms": { "type": "integer" },
+        "end_ms": { "type": "integer" },
+        "confidence": { "type": "number" },
+        "note": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

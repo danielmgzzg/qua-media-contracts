@@ -1,0 +1,28 @@
+[package]
+name = "qua-media-contracts"
+version = "0.1.0"
+edition = "2021"
+description = "Generated Rust types and runtime validators for the Qua media pipeline wire protocol."
+license = "UNLICENSED"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+# Optional runtime JSON Schema validation (Ajv equivalent on the Rust side).
+# Enable in dev/test to catch contract drift; off in prod for zero overhead.
+validate = ["dep:jsonschema"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+jsonschema = { version = "0.18", optional = true, default-features = false }
+
+[build-dependencies]
+schemars = "0.8"
+serde_json = "1.0"
+typify = "0.2"
+prettyplease = "0.2"
+syn = { version = "2", features = ["full", "parsing"] }

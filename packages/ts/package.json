@@ -1,0 +1,34 @@
+{
+  "name": "@qua/media-contracts",
+  "version": "0.1.0",
+  "description": "TypeScript types and runtime validators for the Qua media pipeline wire protocol.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schemas/*": "./../../schemas/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "gen": "node scripts/gen.mjs",
+    "validate": "node scripts/validate.mjs",
+    "build": "npm run gen && tsc -p tsconfig.json",
+    "clean": "rm -rf dist src/index.ts"
+  },
+  "devDependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "~5.7.2"
+  }
+}
