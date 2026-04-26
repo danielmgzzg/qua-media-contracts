@@ -57,15 +57,20 @@ pub mod validate {
     }
 
     fn compile(src: &str, label: &str) -> JSONSchema {
-        // Note: cross-file $refs to ../domain.schema.json are intentionally
-        // unresolved here; for full validation in dev, bundle the three
-        // schemas with a $RefParser-equivalent step before calling these.
-        // The DOMAIN_SCHEMA_SRC is included so a future bundling helper has
-        // it available without an extra fs read.
-        let _ = DOMAIN_SCHEMA_SRC;
+        // Register domain.schema.json so cross-file $refs resolve correctly.
+        // The domain schema $id is https://contracts.qua.media/v1/domain.schema.json
+        // and the server/client schemas reference it as ../domain.schema.json
+        // which resolves to that URL relative to their own $id.
+        let domain: Value = serde_json::from_str(DOMAIN_SCHEMA_SRC)
+            .unwrap_or_else(|e| panic!("parse domain schema: {e}"));
         let value: Value = serde_json::from_str(src)
             .unwrap_or_else(|e| panic!("parse {label} schema: {e}"));
-        JSONSchema::compile(&value)
+        JSONSchema::options()
+            .with_document(
+                "https://contracts.qua.media/v1/domain.schema.json".to_string(),
+                domain,
+            )
+            .compile(&value)
             .unwrap_or_else(|e| panic!("compile {label} schema: {e}"))
     }
 
