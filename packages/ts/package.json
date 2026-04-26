@@ -4,7 +4,7 @@
   "description": "TypeScript types and runtime validators for the Qua media pipeline wire protocol.",
   "license": "UNLICENSED",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://npm.cloudsmith.io/quadricular/qua-media/"
   },
   "type": "module",
   "main": "./dist/index.js",

@@ -9,6 +9,7 @@ gen: gen-ts gen-rust
 
 gen-ts:
 	cd packages/ts && npm run gen
+	cd packages/ts && npx tsc -p tsconfig.json
 
 gen-rust:
 	# Sync bundled schema copy (committed for registry publishing).
