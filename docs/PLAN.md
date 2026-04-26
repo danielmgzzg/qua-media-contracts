@@ -174,7 +174,7 @@ pattern in CI) and can switch to registry deps when desired. The
 
 ### Phase 2 — Backend builds against contracts (qua-media-rs) 🚧 IN PROGRESS
 
-**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3)):**
+**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3), [`22f9bbf`](https://github.com/danielmgzzg/qua-media-pipeline/commit/22f9bbf)):**
 
 - `qua-api` now mounts `GET /v1/ws[?run_id=<uuid>]` (outside `AuthLayer` during the
   mock-→-real transition) — see
@@ -196,14 +196,24 @@ pattern in CI) and can switch to registry deps when desired. The
     fields and these are genuinely unavailable at the API tier;
   - when `?run_id=` is provided, event replay and polling are also
     filtered to that run only (via the indexed `run_id` column).
+  - **Per-stage payload bridges (in progress):**
+    - `semantic_frontend` ✅ — `stage_attempts.output_json` →
+      `Snapshot.take_set` (mapping domain `ReviewedTake` →
+      contract `ReviewedTake`) + `Snapshot.episode` (from
+      `payload.episode_basename`). Domain `ScriptRole::Detail`
+      (no contract counterpart) is mapped to `practical`.
 - Every outbound frame is validated against the bundled server schema
   in debug builds.
 
 **Still to do in Phase 2** (each item is a separate vertical slice):
 
+- script blocks aren't persisted by `semantic_frontend` today (only the
+  resolved take_set is). Either (a) extend the stage's `Payload` to
+  include the parsed `Vec<ScriptBlock>`, or (b) have `qua-api` re-read
+  the YAML from object storage. Option (a) is preferred.
 - `Decision::Reject` has no contract counterpart — currently dropped;
   may want a `StageFailed` bridge instead;
-- per-stage payload work — `semantic_frontend` first, in the order
+- per-stage payload work — `extract_and_preview` next, then the order
   listed below.
 
 The `qua-api` crate's WebSocket handler will implement the same
