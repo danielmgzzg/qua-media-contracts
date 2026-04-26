@@ -115,93 +115,99 @@ Set up codegen for TS + Rust.
 This phase was **risk-free and worth doing immediately** because it forced
 formalization of what was previously implicit.
 
-### Phase 1 — Wire contracts into the UI repo ⬅ NEXT
+### Phase 1 — Wire contracts into the UI repo ✅ DONE
 
-The UI repo depends on this contract; nothing observable changes.
+The UI repo depends on this contract; nothing observable changed.
 
-#### 1a. Client (TypeScript)
+**Outcome:** both client and mock server now consume the generated
+types; CI checks out `qua-media-contracts` as a sibling and builds
+`packages/ts/dist/` before the client `npm ci`. The contract is
+versioned at `v0.1.0` and published to Cloudsmith (npm + Cargo).
 
-```jsonc
-// client/package.json
-"dependencies": {
-  "@qua/media-contracts": "github:danielmgzzg/qua-media-contracts#v0.1.0"
-}
-```
+#### 1a. Client (TypeScript) ✅
 
-Replace the hand-rolled types in `client/src/types/index.ts` with re-exports
-from `@qua/media-contracts`. Keep UI-only types (`EventLog`, `STAGE_ORDER`,
-`STATUS_META`, derived `StageState.history`) local — they aren't on the wire.
+Uses `"@qua/media-contracts": "file:../../qua-media-contracts/packages/ts"`
+locally; CI resolves the same path via the multi-checkout pattern.
+`client/src/types/index.ts` re-exports wire types from
+`@qua/media-contracts` and extends `WireStageState` with UI-only
+`{ history, current_round, last_feedback }`.
 
-```ts
-// client/src/types/index.ts (after)
-export type {
-  WsMessage,
-  ClientMessage,
-  Snapshot,
-  Project,
-  Episode,
-  // ... etc
-} from "@qua/media-contracts";
+**Acceptance gate:** ✅ `npm run build` clean, `ci` workflow green.
 
-// UI-only additions stay here:
-export interface EventLog { /* ... */ }
-export const STAGE_ORDER = [ /* ... */ ] as const;
-```
+#### 1b. Server (Rust mock) ✅
 
-**Acceptance gate:** `npm run build` clean, `tilt trigger e2e` 8/8 pass.
+`server/Cargo.toml` declares
+`qua-media-contracts = { path = "../../qua-media-contracts/crates/qua-media-contracts", features = ["validate"] }`.
+The inline `enum WsMessage` and `enum ClientMessage` were removed from
+`server/src/main.rs` and replaced with the generated types from the
+crate. Variant constructors and match arms were updated for
+PascalCase + tagged-union shapes that typify produces.
 
-#### 1b. Server (Rust mock)
+**Acceptance gate:** ✅ `cargo build --manifest-path server/Cargo.toml`
+clean. The `send()` helper validates every outbound frame against
+`contracts::validate::server_message` in debug builds, and the inbound
+handler validates client frames — catching schema drift before the UI
+ever sees it.
 
-```toml
-# server/Cargo.toml
-[dependencies]
-qua-media-contracts = { git = "ssh://git@github.com/danielmgzzg/qua-media-contracts", tag = "v0.1.0" }
-```
+#### 1c. Add the swap point ✅
 
-Delete the inline `enum WsMessage` and `enum ClientMessage` from
-`server/src/main.rs` (lines ~825–1200). Replace with:
-
-```rust
-use qua_media_contracts::{ServerMessage as WsMessage, ClientMessage};
-```
-
-**Watch-outs:**
-
-- Generated variant names use PascalCase from the schema's `$defs` keys
-  (e.g. `ServerMessage::WorkerHeartbeat`). Match arms may need renaming.
-- Generated structs have a `pub type_:` field with `#[serde(rename = "type")]`
-  for the discriminator. Constructors that fabricated `WsMessage::Foo { ... }`
-  variant-style still work because typify emits tuple-variant enums.
-- The `take_id`/`run_id`/`timestamp` field types may differ slightly from
-  the inline ones (`u32` vs `u64`, etc.). Adjust call sites — the compiler
-  tells you what.
-
-**Acceptance gate:** `cargo build --manifest-path server/Cargo.toml` clean,
-`tilt up` snapshot reaches the client, `tilt trigger e2e` 8/8 pass.
-
-#### 1c. Add the swap point
+Wired in `client/src/hooks/usePipeline.ts`:
 
 ```ts
-// client/src/lib/ws.ts
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
+const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:3001/ws";
 ```
 
-`VITE_WS_URL=ws://localhost:8080/v1/ws` will later point at the real
-backend. No-op today; trivial 5-line change. Tag this `v0.1.0` of the UI
-once 1a+1b+1c land.
+`VITE_WS_URL` is declared in `client/src/vite-env.d.ts`. Setting
+`VITE_WS_URL=ws://localhost:8080/v1/ws` will point at the real backend
+once Phase 2 lands.
 
-#### 1d. Tag the contract `v0.1.0`
+#### 1d. Tag the contract `v0.1.0` and publish ✅
 
-Tag here, then tag UI repo with the matching contract version pinned.
-From this point forward, **every contract change ships as a new tag**;
-neither downstream repo can reference an unpinned message shape.
+Tagged `v0.1.0` and published to **Cloudsmith** (`quadricular/qua-media`):
 
-### Phase 2 — Backend builds against contracts (qua-media-rs)
+- `@qua/media-contracts@0.1.0` → `https://npm.cloudsmith.io/quadricular/qua-media/`
+- `qua-media-contracts@0.1.0` → Cloudsmith Cargo registry
 
-The backend repo adds the same Cargo dep. The `qua-api` crate's WebSocket
-handler implements the same `ServerMessage` enum the mock implements. As
-stages get built (`semantic_frontend` first), they emit real events using
-the same shapes the mock fabricates.
+Downstream repos consume via local path during dev (multi-repo checkout
+pattern in CI) and can switch to registry deps when desired. The
+`publish.yml` workflow ships a new pair on every `v*` tag.
+
+### Phase 2 — Backend builds against contracts (qua-media-rs) 🚧 IN PROGRESS
+
+**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)):**
+
+- `qua-api` now mounts `GET /v1/ws` (outside `AuthLayer` during the
+  mock-→-real transition) — see
+  [`crates/api/src/routes/ws.rs`](https://github.com/danielmgzzg/qua-media-pipeline/blob/main/crates/api/src/routes/ws.rs).
+- The handler bridges existing backend signals to the contract wire
+  format:
+  - polls `workflow_events` (replay last ~200 on connect, then poll
+    every ~750 ms) and translates `stage_started` / `stage_finished`
+    rows into `ServerMessage::StageStarted` / `StageFinished` frames;
+  - samples `WorkerRegistry` every ~2 s and emits one
+    `ServerMessage::WorkerHeartbeat` per known worker (cpu/memory left
+    at 0 until a real metrics source exists; status flips alive/stale).
+- Every outbound frame is validated against the bundled server schema
+  in debug builds via `qua_media_contracts::validate::server_message`
+  and dropped with a warning on drift, so contract regressions surface
+  in CI/dev rather than crashing the socket.
+- `qua-media-contracts` is wired with the `validate` feature; `axum`
+  picks up the `ws` feature; `tokio-stream` and `futures-util` are new
+  crate deps.
+
+**Still to do in Phase 2** (each item is a separate vertical slice):
+
+- emit `Snapshot` on connect (currently we only replay event history,
+  which means the UI has to reconstruct stage state itself);
+- map `approval_recorded` and `stage_failed` workflow_events to their
+  contract counterparts;
+- per-stage payload work — `semantic_frontend` first, in the order
+  listed below.
+
+The `qua-api` crate's WebSocket handler will implement the same
+`ServerMessage` enum the mock implements. As stages get built
+(`semantic_frontend` first), they emit real events using the same shapes
+the mock fabricates.
 
 **Critical insight: vertical migration, not horizontal.** The backend
 doesn't need feature parity to be useful. It can implement only:
@@ -372,11 +378,11 @@ core (start of Phase 2).
 | Phase | Description                                              | Status |
 | ----- | -------------------------------------------------------- | ------ |
 | 0     | Extract contracts (this repo)                            | ✅ done |
-| 1a    | Wire contracts into UI client                            | ⬅ next |
-| 1b    | Wire contracts into UI mock server                       |        |
-| 1c    | Add `VITE_WS_URL` swap point                             |        |
-| 1d    | Tag `v0.1.0` on both repos                               |        |
-| 2     | Real backend implements core, then per-stage             |        |
+| 1a    | Wire contracts into UI client                            | ✅ done |
+| 1b    | Wire contracts into UI mock server                       | ✅ done |
+| 1c    | Add `VITE_WS_URL` swap point                             | ✅ done |
+| 1d    | Tag `v0.1.0` and publish to Cloudsmith                   | ✅ done |
+| 2     | Real backend implements core, then per-stage             | ⬅ next |
 | 3     | Switch UI to real backend via env var                    |        |
 | 4     | Mock becomes contract conformance harness                |        |
 

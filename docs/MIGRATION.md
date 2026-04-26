@@ -13,17 +13,16 @@ Repos referenced (by local path):
 - **U** = `~/dev/qua-media-ui` (React client + Rust mock server)
 - **R** = `~/dev/qua-media-rs` (real backend: api, worker, fsm, stages…)
 
-## Audit snapshot (entry state)
+## Audit snapshot (as of v0.1.0)
 
 | Repo | State                                                                                       |
 | ---- | ------------------------------------------------------------------------------------------- |
-| C    | Phase 0 ✅ — schemas + TS gen + Rust gen + validate all green                               |
-| U    | Not yet consuming C — `client/src/types/index.ts` and `server/src/main.rs` hand-rolled      |
-| R    | Mature backend on its own `qua-domain` types — does **not** depend on C yet                 |
+| C    | Phase 0 ✅ — schemas + TS gen + Rust gen + validate green; **published to Cloudsmith @ `v0.1.0`** |
+| U    | Phase 1 ✅ — client + mock server consume contracts; CI green; `VITE_WS_URL` swap point wired |
+| R    | Phase 1 partial — workspace dep declared (`qua-media-contracts = { workspace = true }` in `crates/api`); **no WS handler yet**; CI green |
 
-Two independent type universes exist for what should be one wire format
-(U's mock + client, and R's `qua-domain`). Reconciling them is the bulk
-of the remaining work.
+Phases 1a–1d are done. Phase 2 (qua-api emits contract messages) is the
+next piece of work. Steps 5–8 below remain open.
 
 ## Ordering principle
 
@@ -210,6 +209,20 @@ in **R**.
 
 ## Step 6 — Phase 2: qua-api implements the contract, vertical-slice
 
+**Initial vertical slice landed** — commit `qua-media-pipeline@3ecf215`
+adds [`crates/api/src/routes/ws.rs`](https://github.com/danielmgzzg/qua-media-pipeline/blob/main/crates/api/src/routes/ws.rs)
+which mounts `GET /v1/ws` (outside `AuthLayer` during transition) and
+bridges existing backend signals to contract `ServerMessage` frames:
+
+- replays the last ~200 `workflow_events` rows on connect, then polls
+  every ~750 ms; translates `stage_started` and `stage_finished`
+  events into `StageStarted` / `StageFinished` contract frames;
+- samples `WorkerRegistry` every ~2 s and emits one `WorkerHeartbeat`
+  per known worker (cpu/memory placeholders, status flips alive/stale);
+- validates every outbound frame against the bundled server schema in
+  debug builds via `qua_media_contracts::validate::server_message`
+  and drops drifted frames with a warning rather than panicking.
+
 **Per stage**, in the order listed in [PLAN.md](./PLAN.md#phase-2--backend-builds-against-contracts-qua-media-rs):
 
 1. In **R**: add `qua-media-contracts = { git = ..., tag = "vX.Y.Z" }`
@@ -279,15 +292,38 @@ wiring).
 
 ## Status checklist
 
-Update as steps complete. One owner per step.
-
 | Step | Description                                       | Status |
 | ---- | ------------------------------------------------- | ------ |
-| 1    | Mock server onto contract crate (Phase 1b)        |        |
-| 2    | Client onto contract package (Phase 1a)           |        |
-| 3    | `VITE_WS_URL` swap point (Phase 1c)               |        |
-| 4    | Tag `v0.1.0` on C and U (Phase 1d)                |        |
-| 5    | Reconcile `qua-domain` vs contract                |        |
-| 6    | qua-api emits contract, per-stage (Phase 2)       |        |
+| 1    | Mock server onto contract crate (Phase 1b)        | ✅ done |
+| 2    | Client onto contract package (Phase 1a)           | ✅ done |
+| 3    | `VITE_WS_URL` swap point (Phase 1c)               | ✅ done |
+| 4    | Tag `v0.1.0` on C and U (Phase 1d)                | ✅ done — published to Cloudsmith |
+| 5    | Reconcile `qua-domain` vs contract                | ⬅ next |
+| 6    | qua-api emits contract, per-stage (Phase 2)       | 🚧 in progress — `/v1/ws` vertical slice landed (StageStarted/StageFinished/WorkerHeartbeat); Snapshot + ApprovalRecorded + per-stage payloads remaining |
 | 7    | UI default flips to real backend (Phase 3)        |        |
 | 8    | Mock becomes conformance harness (Phase 4)        |        |
+
+## What was added beyond the original plan
+
+- **Cloudsmith publishing** (`quadricular/qua-media`): both packages
+  published on every `v*` tag via `.github/workflows/publish.yml`.
+- **Multi-checkout CI pattern**: U and R workflows check out
+  `qua-media-contracts` as a sibling directory so `path = "..."` deps
+  resolve identically locally and in CI. `qua-media-contracts` is a
+  **public** GitHub repo so this checkout works without a PAT.
+- **`build.rs` writes to `OUT_DIR`** (not `src/generated.rs`) so the
+  crate is publishable to a registry without uncommitted changes; the
+  bundled copy of `schemas/v1/` lives under
+  `crates/qua-media-contracts/schemas/` for registry installs.
+- **TypeScript `dist/` step in CI**: `make gen-ts` is followed by
+  `npx tsc -p tsconfig.json` so `@qua/media-contracts/dist/index.d.ts`
+  exists before the client `npm ci` resolves types.
+- **Cross-file `$ref` resolution in the `validate` feature**: `lib.rs`
+  registers `domain.schema.json` via
+  `JSONSchema::options().with_document(id, value)` so messages with
+  refs like `CropApplied.crop → ../domain.schema.json#/$defs/CropRegion`
+  validate correctly. Without this the mock server panicked on any
+  message that referenced a domain type.
+- **Postgres service in qua-media-rs CI** + libcurl4-openssl-dev for
+  rdkafka cmake-build: the `sqlx::query!` macros need a live
+  `DATABASE_URL` at compile time.
