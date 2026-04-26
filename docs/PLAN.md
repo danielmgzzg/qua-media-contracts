@@ -174,33 +174,35 @@ pattern in CI) and can switch to registry deps when desired. The
 
 ### Phase 2 — Backend builds against contracts (qua-media-rs) 🚧 IN PROGRESS
 
-**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)):**
+**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3)):**
 
-- `qua-api` now mounts `GET /v1/ws` (outside `AuthLayer` during the
+- `qua-api` now mounts `GET /v1/ws[?run_id=<uuid>]` (outside `AuthLayer` during the
   mock-→-real transition) — see
   [`crates/api/src/routes/ws.rs`](https://github.com/danielmgzzg/qua-media-pipeline/blob/main/crates/api/src/routes/ws.rs).
 - The handler bridges existing backend signals to the contract wire
   format:
   - polls `workflow_events` (replay last ~200 on connect, then poll
-    every ~750 ms) and translates `stage_started` / `stage_finished`
-    rows into `ServerMessage::StageStarted` / `StageFinished` frames;
+    every ~750 ms) and translates `stage_started` / `stage_finished` /
+    `approval_recorded` / `artifact_published` / `run_completed`
+    rows into their contract `ServerMessage` counterparts;
   - samples `WorkerRegistry` every ~2 s and emits one
-    `ServerMessage::WorkerHeartbeat` per known worker (cpu/memory left
-    at 0 until a real metrics source exists; status flips alive/stale).
+    `ServerMessage::WorkerHeartbeat` per known worker;
+  - when `?run_id=` is provided, emits a `ServerMessage::Snapshot`
+    as the **first frame** on connect, populated with real DB data
+    (`episode_runs` → `RunState`, `run_stages` + `stage_attempts`
+    count → `Vec<StageState>`, `WorkerRegistry` → `Vec<Worker>`);
+    all media-domain fields (audio, compositor, eye-alignment, …) are
+    stubbed with empty / zero values — the contract requires all 21
+    fields and these are genuinely unavailable at the API tier;
+  - when `?run_id=` is provided, event replay and polling are also
+    filtered to that run only (via the indexed `run_id` column).
 - Every outbound frame is validated against the bundled server schema
-  in debug builds via `qua_media_contracts::validate::server_message`
-  and dropped with a warning on drift, so contract regressions surface
-  in CI/dev rather than crashing the socket.
-- `qua-media-contracts` is wired with the `validate` feature; `axum`
-  picks up the `ws` feature; `tokio-stream` and `futures-util` are new
-  crate deps.
+  in debug builds.
 
 **Still to do in Phase 2** (each item is a separate vertical slice):
 
-- emit `Snapshot` on connect (currently we only replay event history,
-  which means the UI has to reconstruct stage state itself);
-- map `approval_recorded` and `stage_failed` workflow_events to their
-  contract counterparts;
+- `Decision::Reject` has no contract counterpart — currently dropped;
+  may want a `StageFailed` bridge instead;
 - per-stage payload work — `semantic_frontend` first, in the order
   listed below.
 
