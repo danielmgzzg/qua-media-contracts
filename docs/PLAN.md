@@ -315,13 +315,39 @@ Suggested order (matches the pipeline):
 9. `export` → render_started, render_progress, render_completed, export_summary
 10. `qa` → qa state in snapshot only
 
-### Phase 3 — The swap
+### Phase 3 — The swap ✅ WIRED (env-var override)
 
-Already wired in Phase 1c. Set `VITE_WS_URL=ws://localhost:8080/v1/ws`.
-Run both simultaneously during transition: mock on `:3001` for UI iteration,
-real backend on `:8080` for end-to-end testing. Switch via env var.
+Already wired in Phase 1c. Set
+`VITE_WS_URL=ws://localhost:8080/v1/ws` to point the client at the
+real backend; default stays at the mock on `:3001` for offline UI
+dev. Run both simultaneously during transition: mock on `:3001` for
+UI iteration, real backend on `:8080` for end-to-end testing.
 
-### Phase 4 — Mock becomes a contract test fixture
+**Default flip deferred** until a staging deployment of `qua-media-rs`
+is healthy enough that pointing UI dev at it (instead of the mock)
+stops being a regression. Today the real backend needs Postgres,
+Kafka, an S3-compatible store, and ffmpeg present + a seeded run to
+surface anything in the UI — the mock is the better default for
+client work. When staging is up: change the default in
+[`client/src/hooks/usePipeline.ts`](https://github.com/danielmgzzg/qua-media-ui/blob/main/client/src/hooks/usePipeline.ts)
+and document the inversion.
+
+### Phase 4 — Mock becomes a contract test fixture 🟡 PARTIAL
+
+Shape-level contract assertions are already in place via
+[`client/tests/e2e/ws-contract.spec.ts`](https://github.com/danielmgzzg/qua-media-ui/blob/main/client/tests/e2e/ws-contract.spec.ts):
+snapshot arrives within 5s, all 11 stages present, continuous
+events post-snapshot, mid-session reconnect recovers. The suite
+gates the rest of the e2e run.
+
+**Still to land:** schema-driven validation — a Playwright fixture
+that captures every WS frame and validates each against the
+bundled `@qua/media-contracts/schemas/v1/ws/server.schema.json`
+via Ajv (with cross-file `$ref` resolution to `domain.schema.json`,
+the same trick the Rust `validate` feature uses). Wire that suite
+into `qua-media-rs` CI as the contract regression gate. This
+closes the migration loop — any drift in the real backend's
+output shape fails CI.
 
 Once the real backend implements all messages, **don't delete the mock —
 promote it to a contract conformance harness.** Two purposes:
