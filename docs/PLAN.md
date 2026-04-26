@@ -172,9 +172,9 @@ Downstream repos consume via local path during dev (multi-repo checkout
 pattern in CI) and can switch to registry deps when desired. The
 `publish.yml` workflow ships a new pair on every `v*` tag.
 
-### Phase 2 — Backend builds against contracts (qua-media-rs) 🚧 IN PROGRESS
+### Phase 2 — Backend builds against contracts (qua-media-rs) ✅ DONE (DB-reach)
 
-**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3), [`22f9bbf`](https://github.com/danielmgzzg/qua-media-pipeline/commit/22f9bbf), [`7bb050d`](https://github.com/danielmgzzg/qua-media-pipeline/commit/7bb050d)):**
+**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3), [`22f9bbf`](https://github.com/danielmgzzg/qua-media-pipeline/commit/22f9bbf), [`7bb050d`](https://github.com/danielmgzzg/qua-media-pipeline/commit/7bb050d), [`c19546f`](https://github.com/danielmgzzg/qua-media-pipeline/commit/c19546f)):**
 
 - `qua-api` now mounts `GET /v1/ws[?run_id=<uuid>]` (outside `AuthLayer` during the
   mock-→-real transition) — see
@@ -208,19 +208,49 @@ pattern in CI) and can switch to registry deps when desired. The
       Covers ALL stages at once (extract_and_preview, audio_alignment,
       subtitles, render_intent, ...) — any stage that registers an
       artifact surfaces here without extra code.
+    - `Snapshot.campaign` + `Snapshot.project` ✅ —
+      `campaigns` + LATERAL latest `episode_runs` per episode +
+      grouped artifact counts + `revisions.rounds`. Domain run status
+      `Approved`/`Escalated` (no contract counterpart) folds to
+      `Completed`/`Failed`.
+    - `Snapshot.review_queue` ✅ — GLOBAL `run_stages`
+      WHERE `awaiting_review`, joined to episode metadata with
+      attempt + artifact counts.
+    - `Snapshot.system_health` ✅ — CAS stats from
+      `content_objects`; outbox from `kafka_outbox`
+      WHERE `shipped_at IS NULL`. `relayer_status` derived from the
+      oldest-unshipped row's age (`>5 min` disconnected,
+      `>60 s` lagging).
 - Every outbound frame is validated against the bundled server schema
   in debug builds.
 
-**Still to do in Phase 2** (each item is a separate vertical slice):
+**Phase 2 reaches its DB-only ceiling here.** The remaining stubbed
+`Snapshot` fields — `audio_master`, `color_grade`, `compositor`,
+`eye_alignment`, `qa`, `timeline`, `takes`, `templates`,
+`export_catalog`, `export_render`, `script` blocks,
+`asset_catalog.source_assets` — either live as JSON envelopes in CAS
+(read via `content_objects.cas_key`) or correspond to stages not yet
+implemented in `qua-media-rs` (`stage_kind` enum has only
+`semantic_frontend`, `extract_and_preview`, `audio_alignment`,
+`subtitles`, `render_intent`). Bridging them requires either an
+object-store reader in `qua-api` or new pipeline stages — see
+Phase 2.5 below.
 
-- script blocks aren't persisted by `semantic_frontend` today (only the
-  resolved take_set is). Either (a) extend the stage's `Payload` to
-  include the parsed `Vec<ScriptBlock>`, or (b) have `qua-api` re-read
-  the YAML from object storage. Option (a) is preferred.
-- `Decision::Reject` has no contract counterpart — currently dropped;
-  may want a `StageFailed` bridge instead;
-- per-stage payload work — `extract_and_preview` next, then the order
-  listed below.
+### Phase 2.5 — CAS reader for rich payloads 🔬 PLANNED
+
+- Add an object-store client to `qua-api` (S3/R2-compatible).
+- For stages whose `output_json.payload.*_path` points at a JSON
+  envelope in CAS, fetch + parse + map into the corresponding
+  `Snapshot.*` field. Concretely:
+  - `render_intent` → `timeline.v1.json` → `Snapshot.timeline`
+  - `audio_alignment` → episode alignment artifact → takes timing
+  - `subtitles` → episode SRT → `Snapshot.timeline.subtitles`
+- Cache by `content_sha256` (immutable) so a Snapshot rebuild does
+  not re-download.
+- Track contract gaps as they surface: `Decision::Reject` has no
+  `StageFailed` counterpart (currently dropped); `script blocks`
+  aren't persisted by `semantic_frontend` (need stage-side `Payload`
+  extension).
 
 The `qua-api` crate's WebSocket handler will implement the same
 `ServerMessage` enum the mock implements. As stages get built
