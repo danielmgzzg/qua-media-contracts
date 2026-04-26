@@ -298,9 +298,9 @@ wiring).
 | 2    | Client onto contract package (Phase 1a)           | ✅ done |
 | 3    | `VITE_WS_URL` swap point (Phase 1c)               | ✅ done |
 | 4    | Tag `v0.1.0` on C and U (Phase 1d)                | ✅ done — published to Cloudsmith |
-| 5    | Reconcile `qua-domain` vs contract                | ⬅ next |
-| 6    | qua-api emits contract, per-stage (Phase 2)       | ✅ done (DB-reach) — `/v1/ws[?run_id=]` slice landed (StageStarted/Finished/ApprovalRecorded/ArtifactPublished/RunCompleted/WorkerHeartbeat + Snapshot on connect); per-stage payloads: `semantic_frontend` (take_set + episode), `asset_catalog.artifacts` (covers all stages), `campaign`+`project`, `review_queue`, `system_health`. Remaining Snapshot fields require an object-store reader to parse CAS-stored JSON envelopes — tracked as Phase 2.5. |
-| 7    | UI default flips to real backend (Phase 3)        |        |
+| 5    | Reconcile `qua-domain` vs contract                | 🟡 de-facto done — reconciliation has happened per-bridge inline (see Phase 2 commits): `ScriptRole::Detail` → `practical`, `Decision::Reject` dropped, `Approved`/`Escalated` run-status folded into `Completed`/`Failed`. The standalone `qua-media-rs/docs/CONTRACT.md` table called for in the original plan was never written; remaining gaps are tracked in [PLAN.md Phase 2.5](./PLAN.md#phase-25--cas-reader-for-rich-payloads--done-reachable-scope) instead. |
+| 6    | qua-api emits contract, per-stage (Phase 2)       | ✅ done (DB-reach + CAS-reach) — `/v1/ws[?run_id=]` slice landed (StageStarted/Finished/ApprovalRecorded/ArtifactPublished/RunCompleted/WorkerHeartbeat + Snapshot on connect); per-stage payloads bridged: `semantic_frontend` (take_set + episode), `asset_catalog.artifacts` (covers all stages), `campaign`+`project`, `review_queue`, `system_health`, `timeline` (from CAS), `timeline.subtitles` (from CAS). Remaining stubbed Snapshot fields are blocked on upstream pipeline work — see [PLAN.md Phase 2.5](./PLAN.md#phase-25--cas-reader-for-rich-payloads--done-reachable-scope). |
+| 7    | UI default flips to real backend (Phase 3)        | ⬅ next |
 | 8    | Mock becomes conformance harness (Phase 4)        |        |
 
 ## What was added beyond the original plan

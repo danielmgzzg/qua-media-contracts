@@ -236,31 +236,55 @@ implemented in `qua-media-rs` (`stage_kind` enum has only
 object-store reader in `qua-api` or new pipeline stages — see
 Phase 2.5 below.
 
-### Phase 2.5 — CAS reader for rich payloads � IN PROGRESS
+### Phase 2.5 — CAS reader for rich payloads ✅ DONE (reachable scope)
 
-- ✅ Generic `fetch_artifact_json(state, run_id, stage, logical_path)`
-  helper landed (commit
-  [`8fa9cab`](https://github.com/danielmgzzg/qua-media-pipeline/commit/8fa9cab)) —
-  resolves `artifacts.content_sha256` → `content_objects.cas_key`,
-  downloads from `AppState.store`, parses JSON. Errors are swallowed
-  (returns `None`) so a missing/corrupt artifact never brings down
-  the WS handler.
-- ✅ First stage bridge: `render_intent/timeline.v1.json` →
-  `Snapshot.timeline` (`take_basename → id`, `video_logical_path →
-  take_id`, `duration_ms/1000 → duration_secs`, `timeline_offset_ms
-  → start_secs`). Role/transition default to `practical`/`cut` —
-  the stage doesn't carry these today.
-- ⏳ Remaining stage bridges (each ~50 LOC over the helper):
-  - `audio_alignment` → episode alignment artifact → take timing
-  - `subtitles` → episode SRT → `Snapshot.timeline.subtitles`
-- ⏳ Cache by `content_sha256` (immutable) so a Snapshot rebuild does
-  not re-download.
-- ⏳ Track contract gaps as they surface: `Decision::Reject` has no
-  `StageFailed` counterpart (currently dropped); `script blocks`
-  aren't persisted by `semantic_frontend` (need stage-side `Payload`
-  extension); future stages (compositor / eye_alignment / color_grade /
-  audio_master / qa / export) don't exist yet in `qua-media-rs`'s
-  `stage_kind` enum.
+- ✅ Generic helpers landed (commits
+  [`8fa9cab`](https://github.com/danielmgzzg/qua-media-pipeline/commit/8fa9cab),
+  [`40d78aa`](https://github.com/danielmgzzg/qua-media-pipeline/commit/40d78aa)):
+  - `fetch_artifact_json(state, run_id, stage, logical_path)`
+  - `fetch_artifact_bytes(state, run_id, stage, logical_path)`
+  - All errors swallowed (returns `None`) so a missing/corrupt
+    artifact never brings down the WS handler.
+- ✅ Stage bridges landed:
+  - `render_intent/timeline.v1.json` → `Snapshot.timeline`
+    (entries from clips, total_duration_secs)
+  - `subtitles/episode.srt` → `Snapshot.timeline.subtitles`
+    (best-effort SRT parser, CRLF-normalised, malformed blocks
+    skipped silently)
+
+**Remaining stubbed `Snapshot` fields are blocked on upstream work,
+not on the WS handler.** Logged for traceability:
+
+- `audio_alignment` produces per-token alignment data which has **no
+  clean contract counterpart** — no `Snapshot` field exists for raw
+  alignment tokens. Either expose `AlignmentAttempt` events directly
+  (already in the contract `oneOf`) or add a `Snapshot.alignment`
+  field. Schema decision needed.
+- `Snapshot.takes` is media-probe-shaped (`codec`, `fps`, `width`,
+  `height`, `loudness_lufs`, `first_frame_tc`, `thumbnail_color`,
+  `path`, `size_bytes`, `duration_secs`). No current stage emits
+  this in its output payload. Either extend
+  `extract_and_preview`'s `Payload` to include a `Vec<TakeProbe>`
+  (preferred — one immutable source of truth), or add a
+  `take_probes` DB table populated post-ffprobe and join here.
+- `Snapshot.script` (parsed script blocks) — `semantic_frontend`
+  resolves the script into a `take_set` but doesn't persist the
+  blocks themselves. Extending the stage's `Payload` to include
+  `Vec<ScriptBlock>` is the clean fix.
+- `audio_master`, `color_grade`, `compositor`, `eye_alignment`, `qa`,
+  `export_catalog`, `export_render` correspond to **stages not yet
+  implemented** (`stage_kind` enum currently has only the 5 stages
+  above). Bridges land as those stages ship.
+- `asset_catalog.source_assets` — ingest tracking lives as artifacts
+  in the same `artifacts` table; surfacing them separately requires
+  either a `source_assets` view or a `kind` column on `artifacts`.
+- `Decision::Reject` → contract `StageFailed` not bridged; currently
+  dropped silently. Open contract gap.
+
+With those upstream changes (script blocks, take probes, remaining
+5 stages, alignment field, source_assets view) Phase 2 becomes
+lossless. The WS handler / contract crate side is complete for the
+data the pipeline produces today.
 
 The `qua-api` crate's WebSocket handler will implement the same
 `ServerMessage` enum the mock implements. As stages get built
