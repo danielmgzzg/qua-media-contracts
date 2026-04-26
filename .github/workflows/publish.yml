@@ -2,7 +2,7 @@ name: publish
 
 on:
   push:
-    tags: ["v*"]
+    tags: [ "v*" ]
 
 jobs:
   # ── npm → Cloudsmith ──────────────────────────────────────────────────────
@@ -49,7 +49,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             crates/qua-media-contracts/target
-          key: ${{ runner.os }}-cargo-publish-${{ hashFiles('crates/qua-media-contracts/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-publish-${{
+            hashFiles('crates/qua-media-contracts/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-publish-
 
       - name: Package crate

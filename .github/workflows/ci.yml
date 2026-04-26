@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 jobs:
@@ -32,7 +32,8 @@ jobs:
         run: make gen-rust
 
       - name: Build Rust crate with validate feature
-        run: cargo build --manifest-path crates/qua-media-contracts/Cargo.toml --features validate
+        run: cargo build --manifest-path crates/qua-media-contracts/Cargo.toml
+          --features validate
 
       - name: Type-check generated TS
         run: cd packages/ts && npx tsc --noEmit
