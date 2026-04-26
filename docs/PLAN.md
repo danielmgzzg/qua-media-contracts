@@ -236,21 +236,31 @@ implemented in `qua-media-rs` (`stage_kind` enum has only
 object-store reader in `qua-api` or new pipeline stages — see
 Phase 2.5 below.
 
-### Phase 2.5 — CAS reader for rich payloads 🔬 PLANNED
+### Phase 2.5 — CAS reader for rich payloads � IN PROGRESS
 
-- Add an object-store client to `qua-api` (S3/R2-compatible).
-- For stages whose `output_json.payload.*_path` points at a JSON
-  envelope in CAS, fetch + parse + map into the corresponding
-  `Snapshot.*` field. Concretely:
-  - `render_intent` → `timeline.v1.json` → `Snapshot.timeline`
-  - `audio_alignment` → episode alignment artifact → takes timing
+- ✅ Generic `fetch_artifact_json(state, run_id, stage, logical_path)`
+  helper landed (commit
+  [`8fa9cab`](https://github.com/danielmgzzg/qua-media-pipeline/commit/8fa9cab)) —
+  resolves `artifacts.content_sha256` → `content_objects.cas_key`,
+  downloads from `AppState.store`, parses JSON. Errors are swallowed
+  (returns `None`) so a missing/corrupt artifact never brings down
+  the WS handler.
+- ✅ First stage bridge: `render_intent/timeline.v1.json` →
+  `Snapshot.timeline` (`take_basename → id`, `video_logical_path →
+  take_id`, `duration_ms/1000 → duration_secs`, `timeline_offset_ms
+  → start_secs`). Role/transition default to `practical`/`cut` —
+  the stage doesn't carry these today.
+- ⏳ Remaining stage bridges (each ~50 LOC over the helper):
+  - `audio_alignment` → episode alignment artifact → take timing
   - `subtitles` → episode SRT → `Snapshot.timeline.subtitles`
-- Cache by `content_sha256` (immutable) so a Snapshot rebuild does
+- ⏳ Cache by `content_sha256` (immutable) so a Snapshot rebuild does
   not re-download.
-- Track contract gaps as they surface: `Decision::Reject` has no
+- ⏳ Track contract gaps as they surface: `Decision::Reject` has no
   `StageFailed` counterpart (currently dropped); `script blocks`
   aren't persisted by `semantic_frontend` (need stage-side `Payload`
-  extension).
+  extension); future stages (compositor / eye_alignment / color_grade /
+  audio_master / qa / export) don't exist yet in `qua-media-rs`'s
+  `stage_kind` enum.
 
 The `qua-api` crate's WebSocket handler will implement the same
 `ServerMessage` enum the mock implements. As stages get built
