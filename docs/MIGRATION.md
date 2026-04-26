@@ -299,7 +299,7 @@ wiring).
 | 3    | `VITE_WS_URL` swap point (Phase 1c)               | ✅ done |
 | 4    | Tag `v0.1.0` on C and U (Phase 1d)                | ✅ done — published to Cloudsmith |
 | 5    | Reconcile `qua-domain` vs contract                | ⬅ next |
-| 6    | qua-api emits contract, per-stage (Phase 2)       | 🚧 in progress — `/v1/ws[?run_id=]` slice landed (StageStarted/Finished/ApprovalRecorded/ArtifactPublished/RunCompleted/WorkerHeartbeat + Snapshot on connect); per-stage payloads: `semantic_frontend` ✅ (take_set + episode); 9 stages remaining |
+| 6    | qua-api emits contract, per-stage (Phase 2)       | 🚧 in progress — `/v1/ws[?run_id=]` slice landed (StageStarted/Finished/ApprovalRecorded/ArtifactPublished/RunCompleted/WorkerHeartbeat + Snapshot on connect); per-stage payloads: `semantic_frontend` ✅ (take_set + episode), `asset_catalog.artifacts` ✅ (covers all stages); remaining stage-specific payloads: audio_master/color_grade/compositor/eye_alignment/qa/timeline/etc. |
 | 7    | UI default flips to real backend (Phase 3)        |        |
 | 8    | Mock becomes conformance harness (Phase 4)        |        |
 

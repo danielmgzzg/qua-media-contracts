@@ -174,7 +174,7 @@ pattern in CI) and can switch to registry deps when desired. The
 
 ### Phase 2 — Backend builds against contracts (qua-media-rs) 🚧 IN PROGRESS
 
-**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3), [`22f9bbf`](https://github.com/danielmgzzg/qua-media-pipeline/commit/22f9bbf)):**
+**Vertical slice landed (commit [`3ecf215`](https://github.com/danielmgzzg/qua-media-pipeline/commit/3ecf215)) and extended (commits [`30951b9`](https://github.com/danielmgzzg/qua-media-pipeline/commit/30951b9), [`adbe9f3`](https://github.com/danielmgzzg/qua-media-pipeline/commit/adbe9f3), [`22f9bbf`](https://github.com/danielmgzzg/qua-media-pipeline/commit/22f9bbf), [`7bb050d`](https://github.com/danielmgzzg/qua-media-pipeline/commit/7bb050d)):**
 
 - `qua-api` now mounts `GET /v1/ws[?run_id=<uuid>]` (outside `AuthLayer` during the
   mock-→-real transition) — see
@@ -202,6 +202,12 @@ pattern in CI) and can switch to registry deps when desired. The
       contract `ReviewedTake`) + `Snapshot.episode` (from
       `payload.episode_basename`). Domain `ScriptRole::Detail`
       (no contract counterpart) is mapped to `practical`.
+    - `Snapshot.asset_catalog.artifacts` ✅ — pulled from the
+      `artifacts` table joined with `content_objects` for size +
+      mime_type, with `artifact_lineage` parents grouped per child.
+      Covers ALL stages at once (extract_and_preview, audio_alignment,
+      subtitles, render_intent, ...) — any stage that registers an
+      artifact surfaces here without extra code.
 - Every outbound frame is validated against the bundled server schema
   in debug builds.
 
