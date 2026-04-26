@@ -30,7 +30,7 @@
 
 #[allow(clippy::all, dead_code, non_camel_case_types, unused_imports)]
 mod generated {
-    include!("generated.rs");
+    include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 }
 pub use generated::*;
 
@@ -41,11 +41,11 @@ pub mod validate {
     use std::sync::OnceLock;
 
     static SERVER_SCHEMA_SRC: &str =
-        include_str!("../../../schemas/v1/ws/server.schema.json");
+        include_str!(concat!(env!("OUT_DIR"), "/server.schema.json"));
     static CLIENT_SCHEMA_SRC: &str =
-        include_str!("../../../schemas/v1/ws/client.schema.json");
+        include_str!(concat!(env!("OUT_DIR"), "/client.schema.json"));
     static DOMAIN_SCHEMA_SRC: &str =
-        include_str!("../../../schemas/v1/domain.schema.json");
+        include_str!(concat!(env!("OUT_DIR"), "/domain.schema.json"));
 
     fn server() -> &'static JSONSchema {
         static C: OnceLock<JSONSchema> = OnceLock::new();

@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "Generated Rust types and runtime validators for the Qua media pipeline wire protocol."
 license = "UNLICENSED"
-publish = false
+# schemas/ is copied here by the publish workflow; included so downstream builds can run build.rs.
+include = ["src/**", "schemas/**", "build.rs", "Cargo.toml"]
 
 [lib]
 path = "src/lib.rs"
