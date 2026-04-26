@@ -58,8 +58,8 @@ jobs:
       - name: Copy schemas into crate (for packaging)
         run: cp -r schemas/v1 crates/qua-media-contracts/schemas/
 
-      - name: Package crate (--no-verify skips re-running build.rs in clean tmp)
-        run: cargo package --manifest-path crates/qua-media-contracts/Cargo.toml --no-verify
+      - name: Package crate (--allow-dirty because schemas/ are copied but untracked)
+        run: cargo package --manifest-path crates/qua-media-contracts/Cargo.toml --allow-dirty
 
       - name: Install cloudsmith CLI
         run: pip install --quiet cloudsmith-cli

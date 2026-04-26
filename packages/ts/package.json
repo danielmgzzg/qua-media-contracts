@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "TypeScript types and runtime validators for the Qua media pipeline wire protocol.",
   "license": "UNLICENSED",
-  "private": true,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
