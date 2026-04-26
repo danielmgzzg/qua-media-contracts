@@ -1,0 +1,10 @@
+{
+  "type": "worker_heartbeat",
+  "worker_id": "w-1",
+  "status": "idle",
+  "current_stage": null,
+  "cpu_percent": 12.4,
+  "memory_mb": 512,
+  "jobs_completed": 7,
+  "timestamp": "2026-01-01T00:00:01Z"
+}

@@ -11,6 +11,8 @@ gen-ts:
 	cd packages/ts && npm run gen
 
 gen-rust:
+	# Sync bundled schema copy (committed for registry publishing).
+	rsync -a --delete schemas/v1/ crates/qua-media-contracts/schemas/v1/
 	cargo build --manifest-path crates/qua-media-contracts/Cargo.toml
 
 validate:

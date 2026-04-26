@@ -1,0 +1,87 @@
+{
+  "type": "snapshot",
+  "project": { "id": "p1", "campaign_id": "c1", "name": "Demo" },
+  "episode": { "id": "e1", "number": 1, "slug": "intro", "title": "Intro" },
+  "run": {
+    "id": "r1",
+    "status": "running",
+    "started_at": "2026-01-01T00:00:00Z",
+    "completed_at": null
+  },
+  "stages": [
+    {
+      "name": "semantic_frontend",
+      "status": "running",
+      "attempts": 1,
+      "max_revision_rounds": 3,
+      "artifacts": []
+    }
+  ],
+  "takes": [],
+  "workers": [],
+  "script": [],
+  "take_set": [],
+  "timeline": {
+    "entries": [],
+    "subtitles": [],
+    "total_duration_secs": 0,
+    "fps": 30,
+    "resolution": "1920x1080",
+    "codec": "h264",
+    "target_lufs": -14,
+    "manifest": { "outputs": [] }
+  },
+  "campaign": { "id": "c1", "name": "Demo", "episodes": [] },
+  "system_health": {
+    "cas": {
+      "content_objects": 0,
+      "total_bytes_stored": 0,
+      "puts_attempted": 0,
+      "dedup_ratio": 1.0
+    },
+    "outbox": { "pending_rows": 0, "relayer_status": "connected", "lag_ms": 0 }
+  },
+  "review_queue": [],
+  "asset_catalog": {
+    "source_assets": [],
+    "artifacts_run_id": "r1",
+    "artifacts": []
+  },
+  "compositor": {
+    "backgrounds": [],
+    "segments": [],
+    "report": {
+      "segments_processed": 0,
+      "avg_key_quality": 0,
+      "flagged_for_review": 0,
+      "total_processing_ms": 0
+    }
+  },
+  "eye_alignment": {
+    "anchor_x": 0.5,
+    "anchor_y": 0.4,
+    "cut_jump_threshold_px": 20,
+    "takes": [],
+    "cut_points": []
+  },
+  "color_grade": { "reference_take_id": "", "lut_key": "", "takes": [] },
+  "audio_master": {
+    "reference_take_id": "",
+    "target_lufs": -14,
+    "tolerance_lu": 1,
+    "eq_curve_key": "",
+    "takes": []
+  },
+  "export_render": {
+    "run_id": "r1",
+    "target_path_prefix": "out/",
+    "formats": []
+  },
+  "export_catalog": { "campaign_id": "c1", "exports": [] },
+  "templates": [],
+  "qa": {
+    "automated_checks": [],
+    "manual_checks": [],
+    "minimum_manual_required": 0
+  }
+}

@@ -1,0 +1,1221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.qua.media/v1/domain.schema.json",
+  "title": "Qua Media Domain Types",
+  "description": "Shared domain types referenced by WebSocket and HTTP contracts.",
+
+  "$defs": {
+    "Project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "campaign_id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "campaign_id": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+
+    "Episode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "number", "slug", "title"],
+      "properties": {
+        "id": { "type": "string" },
+        "number": { "type": "integer" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" }
+      }
+    },
+
+    "Take": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "source_kind", "duration_secs", "codec", "width", "height",
+        "fps", "path", "size_bytes", "first_frame_tc", "thumbnail_color",
+        "loudness_lufs"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "source_kind": { "type": "string", "description": "e.g. zoom_raw | synthesia_avatar" },
+        "duration_secs": { "type": "number" },
+        "codec": { "type": "string" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "fps": { "type": "number" },
+        "path": { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "first_frame_tc": { "type": "string" },
+        "thumbnail_color": { "type": "string" },
+        "loudness_lufs": { "type": "number" }
+      }
+    },
+
+    "Artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "content_sha256", "size_bytes"],
+      "properties": {
+        "path": { "type": "string" },
+        "content_sha256": { "type": "string" },
+        "size_bytes": { "type": "integer" }
+      }
+    },
+
+    "StageStatus": {
+      "type": "string",
+      "enum": ["pending", "running", "awaiting_review", "approved", "escalated"]
+    },
+
+    "AttemptRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number", "status", "started_at", "finished_at", "decision",
+        "notes", "duration_ms"
+      ],
+      "properties": {
+        "number": { "type": "integer" },
+        "status": {
+          "type": "string",
+          "enum": ["running", "finished", "approved", "request_revision", "escalated"]
+        },
+        "started_at": { "type": "string" },
+        "finished_at": { "type": ["string", "null"] },
+        "decision": {
+          "oneOf": [
+            { "type": "string", "enum": ["approved", "request_revision"] },
+            { "type": "null" }
+          ]
+        },
+        "notes": { "type": ["string", "null"] },
+        "duration_ms": { "type": ["integer", "null"] }
+      }
+    },
+
+    "StageState": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Server-emitted stage state. `history`, `current_round`, `last_feedback` are client-derived and not present on the wire.",
+      "required": [
+        "name", "status", "attempts", "max_revision_rounds", "artifacts"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/StageStatus" },
+        "attempts": { "type": "integer" },
+        "max_revision_rounds": { "type": "integer" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Artifact" }
+        }
+      }
+    },
+
+    "RunStatus": {
+      "type": "string",
+      "enum": [
+        "init", "ready", "running", "awaiting_review",
+        "approved", "completed", "escalated"
+      ]
+    },
+
+    "RunState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "started_at", "completed_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "$ref": "#/$defs/RunStatus" },
+        "started_at": { "type": "string" },
+        "completed_at": { "type": ["string", "null"] }
+      }
+    },
+
+    "Worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "kind", "status", "current_stage", "cpu_percent",
+        "memory_mb", "jobs_completed", "started_at"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "status": { "type": "string" },
+        "current_stage": { "type": ["string", "null"] },
+        "cpu_percent": { "type": "number" },
+        "memory_mb": { "type": "integer" },
+        "jobs_completed": { "type": "integer" },
+        "started_at": { "type": "string" }
+      }
+    },
+
+    "EpisodeRunStatus": {
+      "type": "string",
+      "enum": ["not_started", "running", "awaiting_review", "completed", "failed"]
+    },
+
+    "EpisodeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "number", "slug", "title", "run_status", "current_stage",
+        "last_run_duration_ms", "revision_rounds_used", "artifacts_count",
+        "is_live"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "number": { "type": "integer" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" },
+        "run_status": { "$ref": "#/$defs/EpisodeRunStatus" },
+        "current_stage": { "type": ["string", "null"] },
+        "last_run_duration_ms": { "type": ["integer", "null"] },
+        "revision_rounds_used": { "type": "integer" },
+        "artifacts_count": { "type": "integer" },
+        "is_live": { "type": "boolean" }
+      }
+    },
+
+    "CampaignSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "episodes"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "episodes": { "type": "array", "items": { "$ref": "#/$defs/EpisodeSummary" } }
+      }
+    },
+
+    "CasStats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_objects", "total_bytes_stored", "puts_attempted", "dedup_ratio"],
+      "properties": {
+        "content_objects": { "type": "integer" },
+        "total_bytes_stored": { "type": "integer" },
+        "puts_attempted": { "type": "integer" },
+        "dedup_ratio": { "type": "number" }
+      }
+    },
+
+    "OutboxHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pending_rows", "relayer_status", "lag_ms"],
+      "properties": {
+        "pending_rows": { "type": "integer" },
+        "relayer_status": {
+          "type": "string",
+          "description": "connected | lagging | disconnected"
+        },
+        "lag_ms": { "type": "integer" }
+      }
+    },
+
+    "SystemHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cas", "outbox"],
+      "properties": {
+        "cas": { "$ref": "#/$defs/CasStats" },
+        "outbox": { "$ref": "#/$defs/OutboxHealth" }
+      }
+    },
+
+    "ReviewQueueItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode_id", "episode_number", "episode_slug", "stage",
+        "attempt_number", "waiting_since", "artifacts_count",
+        "auto_approvable", "is_live"
+      ],
+      "properties": {
+        "episode_id": { "type": "string" },
+        "episode_number": { "type": "integer" },
+        "episode_slug": { "type": "string" },
+        "stage": { "type": "string" },
+        "attempt_number": { "type": "integer" },
+        "waiting_since": { "type": "string" },
+        "artifacts_count": { "type": "integer" },
+        "auto_approvable": { "type": "boolean" },
+        "is_live": { "type": "boolean" }
+      }
+    },
+
+    "MediaProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codec", "duration_secs", "width", "height", "fps",
+        "audio_codec", "sample_rate", "channels"
+      ],
+      "properties": {
+        "codec": { "type": "string" },
+        "duration_secs": { "type": "number" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "fps": { "type": "number" },
+        "audio_codec": { "type": "string" },
+        "sample_rate": { "type": "integer" },
+        "channels": { "type": "integer" }
+      }
+    },
+
+    "AssetEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "name", "size_bytes", "content_sha256", "mime_type", "probe"],
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "content_sha256": { "type": "string" },
+        "mime_type": { "type": "string" },
+        "probe": {
+          "oneOf": [
+            { "$ref": "#/$defs/MediaProbe" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+
+    "ArtifactEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path", "name", "size_bytes", "content_sha256", "mime_type",
+        "stage", "lineage_inputs"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "content_sha256": { "type": "string" },
+        "mime_type": { "type": "string" },
+        "stage": { "type": "string" },
+        "lineage_inputs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "AssetCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_assets", "artifacts_run_id", "artifacts"],
+      "properties": {
+        "source_assets": { "type": "array", "items": { "$ref": "#/$defs/AssetEntry" } },
+        "artifacts_run_id": { "type": "string" },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/ArtifactEntry" } }
+      }
+    },
+
+    "ChromaKeyParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key_color", "similarity", "smoothness", "spill_suppression"],
+      "properties": {
+        "key_color": { "type": "string" },
+        "similarity": { "type": "number" },
+        "smoothness": { "type": "number" },
+        "spill_suppression": { "type": "number" }
+      }
+    },
+
+    "CompositorBackground": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "category", "thumbnail_color"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "thumbnail_color": { "type": "string" }
+      }
+    },
+
+    "CompositorSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "take_id", "role", "source_kind", "needs_keying", "chroma",
+        "background_key", "edge_feather_px", "blend_mode", "key_quality",
+        "needs_manual_review", "processing_ms", "preview_asset_key",
+        "before_after_key"
+      ],
+      "properties": {
+        "take_id": { "type": "string" },
+        "role": { "type": "string" },
+        "source_kind": { "type": "string" },
+        "needs_keying": { "type": "boolean" },
+        "chroma": {
+          "oneOf": [
+            { "$ref": "#/$defs/ChromaKeyParams" },
+            { "type": "null" }
+          ]
+        },
+        "background_key": { "type": ["string", "null"] },
+        "edge_feather_px": { "type": "number" },
+        "blend_mode": { "type": "string" },
+        "key_quality": { "type": "number" },
+        "needs_manual_review": { "type": "boolean" },
+        "processing_ms": { "type": "integer" },
+        "preview_asset_key": { "type": "string" },
+        "before_after_key": { "type": "string" }
+      }
+    },
+
+    "CompositorReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["segments_processed", "avg_key_quality", "flagged_for_review", "total_processing_ms"],
+      "properties": {
+        "segments_processed": { "type": "integer" },
+        "avg_key_quality": { "type": "number" },
+        "flagged_for_review": { "type": "integer" },
+        "total_processing_ms": { "type": "integer" }
+      }
+    },
+
+    "CompositorState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backgrounds", "segments", "report"],
+      "properties": {
+        "backgrounds": { "type": "array", "items": { "$ref": "#/$defs/CompositorBackground" } },
+        "segments": { "type": "array", "items": { "$ref": "#/$defs/CompositorSegment" } },
+        "report": { "$ref": "#/$defs/CompositorReport" }
+      }
+    },
+
+    "Bbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "w": { "type": "number" },
+        "h": { "type": "number" }
+      }
+    },
+
+    "FaceLandmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+
+    "DetectedFace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bbox", "left_eye", "right_eye", "nose", "confidence"],
+      "properties": {
+        "bbox": { "$ref": "#/$defs/Bbox" },
+        "left_eye": { "$ref": "#/$defs/FaceLandmark" },
+        "right_eye": { "$ref": "#/$defs/FaceLandmark" },
+        "nose": { "$ref": "#/$defs/FaceLandmark" },
+        "confidence": { "type": "number" }
+      }
+    },
+
+    "EyeDriftSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "drift_x", "drift_y"],
+      "properties": {
+        "frame": { "type": "integer" },
+        "drift_x": { "type": "number" },
+        "drift_y": { "type": "number" }
+      }
+    },
+
+    "AlignmentTransform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transform", "anchor_point", "stabilization_window_frames",
+        "smoothing_factor", "crop_after_transform"
+      ],
+      "properties": {
+        "transform": { "type": "string" },
+        "anchor_point": { "type": "string" },
+        "stabilization_window_frames": { "type": "integer" },
+        "smoothing_factor": { "type": "number" },
+        "crop_after_transform": { "type": "number" }
+      }
+    },
+
+    "EyeAlignmentTake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "take_id", "role", "source_kind", "face_count", "primary_face",
+        "frames_sampled", "drift_samples", "max_drift_px",
+        "needs_correction", "transform"
+      ],
+      "properties": {
+        "take_id": { "type": "string" },
+        "role": { "type": "string" },
+        "source_kind": { "type": "string" },
+        "face_count": { "type": "integer" },
+        "primary_face": { "$ref": "#/$defs/DetectedFace" },
+        "frames_sampled": { "type": "integer" },
+        "drift_samples": { "type": "array", "items": { "$ref": "#/$defs/EyeDriftSample" } },
+        "max_drift_px": { "type": "number" },
+        "needs_correction": { "type": "boolean" },
+        "transform": { "$ref": "#/$defs/AlignmentTransform" }
+      }
+    },
+
+    "CutPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_take_id", "to_take_id", "from_eye_y", "to_eye_y", "jump_px", "flagged"],
+      "properties": {
+        "from_take_id": { "type": "string" },
+        "to_take_id": { "type": "string" },
+        "from_eye_y": { "type": "number" },
+        "to_eye_y": { "type": "number" },
+        "jump_px": { "type": "number" },
+        "flagged": { "type": "boolean" }
+      }
+    },
+
+    "EyeAlignmentState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor_x", "anchor_y", "cut_jump_threshold_px", "takes", "cut_points"],
+      "properties": {
+        "anchor_x": { "type": "number" },
+        "anchor_y": { "type": "number" },
+        "cut_jump_threshold_px": { "type": "number" },
+        "takes": { "type": "array", "items": { "$ref": "#/$defs/EyeAlignmentTake" } },
+        "cut_points": { "type": "array", "items": { "$ref": "#/$defs/CutPoint" } }
+      }
+    },
+
+    "HistogramSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shadows", "midtones", "highlights"],
+      "properties": {
+        "shadows": { "type": "number" },
+        "midtones": { "type": "number" },
+        "highlights": { "type": "number" }
+      }
+    },
+
+    "RgbHistogram": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["r", "g", "b"],
+      "properties": {
+        "r": { "type": "array", "items": { "type": "number" } },
+        "g": { "type": "array", "items": { "type": "number" } },
+        "b": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+
+    "ColorAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "avg_luminance", "white_balance_k", "saturation", "contrast",
+        "summary", "histogram"
+      ],
+      "properties": {
+        "avg_luminance": { "type": "number" },
+        "white_balance_k": { "type": "integer" },
+        "saturation": { "type": "number" },
+        "contrast": { "type": "number" },
+        "summary": { "$ref": "#/$defs/HistogramSummary" },
+        "histogram": { "$ref": "#/$defs/RgbHistogram" }
+      }
+    },
+
+    "GradeAdjustments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exposure", "temperature", "tint", "saturation", "contrast",
+        "lift", "gamma", "gain"
+      ],
+      "properties": {
+        "exposure": { "type": "number" },
+        "temperature": { "type": "number" },
+        "tint": { "type": "number" },
+        "saturation": { "type": "number" },
+        "contrast": { "type": "number" },
+        "lift": { "type": "number" },
+        "gamma": { "type": "number" },
+        "gain": { "type": "number" }
+      }
+    },
+
+    "ColorGradeTake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "take_id", "role", "source_kind", "is_reference", "before",
+        "after", "adjustments"
+      ],
+      "properties": {
+        "take_id": { "type": "string" },
+        "role": { "type": "string" },
+        "source_kind": { "type": "string" },
+        "is_reference": { "type": "boolean" },
+        "before": { "$ref": "#/$defs/ColorAnalysis" },
+        "after": { "$ref": "#/$defs/ColorAnalysis" },
+        "adjustments": { "$ref": "#/$defs/GradeAdjustments" }
+      }
+    },
+
+    "ColorGradeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_take_id", "lut_key", "takes"],
+      "properties": {
+        "reference_take_id": { "type": "string" },
+        "lut_key": { "type": "string" },
+        "takes": { "type": "array", "items": { "$ref": "#/$defs/ColorGradeTake" } }
+      }
+    },
+
+    "LoudnessMeasurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integrated_lufs", "true_peak_dbfs", "loudness_range_lu", "short_term_max_lufs"],
+      "properties": {
+        "integrated_lufs": { "type": "number" },
+        "true_peak_dbfs": { "type": "number" },
+        "loudness_range_lu": { "type": "number" },
+        "short_term_max_lufs": { "type": "number" }
+      }
+    },
+
+    "NoiseProfileData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["noise_floor_db", "snr_db", "has_room_tone", "room_tone_profile_key"],
+      "properties": {
+        "noise_floor_db": { "type": "number" },
+        "snr_db": { "type": "number" },
+        "has_room_tone": { "type": "boolean" },
+        "room_tone_profile_key": { "type": "string" }
+      }
+    },
+
+    "EqCurve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bass_db", "mid_db", "treble_db"],
+      "properties": {
+        "bass_db": { "type": "number" },
+        "mid_db": { "type": "number" },
+        "treble_db": { "type": "number" }
+      }
+    },
+
+    "MasterControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_lufs", "noise_reduction_pct", "eq"],
+      "properties": {
+        "target_lufs": { "type": "number" },
+        "noise_reduction_pct": { "type": "number" },
+        "eq": { "$ref": "#/$defs/EqCurve" }
+      }
+    },
+
+    "AudioMasterTake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "take_id", "role", "source_kind", "is_reference",
+        "before_loudness", "after_loudness", "noise_before", "noise_after",
+        "eq_before", "eq_match_curve", "controls", "gain_applied_db",
+        "limiter_engaged", "noise_reduction_applied", "eq_curve_key"
+      ],
+      "properties": {
+        "take_id": { "type": "string" },
+        "role": { "type": "string" },
+        "source_kind": { "type": "string" },
+        "is_reference": { "type": "boolean" },
+        "before_loudness": { "$ref": "#/$defs/LoudnessMeasurement" },
+        "after_loudness": { "$ref": "#/$defs/LoudnessMeasurement" },
+        "noise_before": { "$ref": "#/$defs/NoiseProfileData" },
+        "noise_after": { "$ref": "#/$defs/NoiseProfileData" },
+        "eq_before": { "$ref": "#/$defs/EqCurve" },
+        "eq_match_curve": { "$ref": "#/$defs/EqCurve" },
+        "controls": { "$ref": "#/$defs/MasterControls" },
+        "gain_applied_db": { "type": "number" },
+        "limiter_engaged": { "type": "boolean" },
+        "noise_reduction_applied": { "type": "boolean" },
+        "eq_curve_key": { "type": "string" }
+      }
+    },
+
+    "AudioMasterState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_take_id", "target_lufs", "tolerance_lu", "eq_curve_key", "takes"],
+      "properties": {
+        "reference_take_id": { "type": "string" },
+        "target_lufs": { "type": "number" },
+        "tolerance_lu": { "type": "number" },
+        "eq_curve_key": { "type": "string" },
+        "takes": { "type": "array", "items": { "$ref": "#/$defs/AudioMasterTake" } }
+      }
+    },
+
+    "CropRegion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cx", "cy", "width", "height"],
+      "properties": {
+        "cx": { "type": "number" },
+        "cy": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+
+    "SubtitleStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["font", "size_px", "position", "background_opacity", "text_color", "burn_in"],
+      "properties": {
+        "font": { "type": "string" },
+        "size_px": { "type": "integer" },
+        "position": { "type": "string", "description": "top | center | bottom" },
+        "background_opacity": { "type": "number" },
+        "text_color": { "type": "string" },
+        "burn_in": { "type": "boolean" }
+      }
+    },
+
+    "RenderStatus": {
+      "type": "string",
+      "enum": ["queued", "rendering", "completed", "failed"]
+    },
+
+    "ExportFormatState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "label", "output_key", "width", "height", "aspect",
+        "codec", "bitrate_kbps", "max_duration_secs", "estimated_size_bytes",
+        "fps", "crop", "subtitle_style", "needs_intro_outro", "status",
+        "percent", "encoding_fps", "eta_secs", "current_frame",
+        "total_frames", "elapsed_secs", "file_size_bytes",
+        "encoding_time_secs"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "label": { "type": "string" },
+        "output_key": { "type": "string" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "aspect": { "type": "string" },
+        "codec": { "type": "string" },
+        "bitrate_kbps": { "type": "integer" },
+        "max_duration_secs": { "type": ["number", "null"] },
+        "estimated_size_bytes": { "type": "integer" },
+        "fps": { "type": "number" },
+        "crop": {
+          "oneOf": [
+            { "$ref": "#/$defs/CropRegion" },
+            { "type": "null" }
+          ]
+        },
+        "subtitle_style": {
+          "oneOf": [
+            { "$ref": "#/$defs/SubtitleStyle" },
+            { "type": "null" }
+          ]
+        },
+        "needs_intro_outro": { "type": "boolean" },
+        "status": { "$ref": "#/$defs/RenderStatus" },
+        "percent": { "type": "number" },
+        "encoding_fps": { "type": "number" },
+        "eta_secs": { "type": "number" },
+        "current_frame": { "type": "integer" },
+        "total_frames": { "type": "integer" },
+        "elapsed_secs": { "type": "number" },
+        "file_size_bytes": { "type": "integer" },
+        "encoding_time_secs": { "type": "number" }
+      }
+    },
+
+    "ExportRenderState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "target_path_prefix", "formats"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "target_path_prefix": { "type": "string" },
+        "formats": { "type": "array", "items": { "$ref": "#/$defs/ExportFormatState" } }
+      }
+    },
+
+    "ExportSummaryFormat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "output_key", "file_size_bytes", "duration_secs", "encoding_time_secs"],
+      "properties": {
+        "name": { "type": "string" },
+        "output_key": { "type": "string" },
+        "file_size_bytes": { "type": "integer" },
+        "duration_secs": { "type": "number" },
+        "encoding_time_secs": { "type": "number" }
+      }
+    },
+
+    "LayerPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor", "x_pct", "y_pct", "width_pct", "height_pct", "opacity"],
+      "properties": {
+        "anchor": { "type": "string" },
+        "x_pct": { "type": "number" },
+        "y_pct": { "type": "number" },
+        "width_pct": { "type": "number" },
+        "height_pct": { "type": "number" },
+        "opacity": { "type": "number" }
+      }
+    },
+
+    "LayerContent": {
+      "description": "Discriminated layer content union (tagged on `type`).",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "asset_key", "label"],
+          "properties": {
+            "type": { "const": "watermark" },
+            "asset_key": { "type": "string" },
+            "label": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "style", "font", "size_px", "bg_color", "text_color"],
+          "properties": {
+            "type": { "const": "subtitle" },
+            "style": { "type": "string" },
+            "font": { "type": "string" },
+            "size_px": { "type": "integer" },
+            "bg_color": { "type": "string" },
+            "text_color": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source", "fit"],
+          "properties": {
+            "type": { "const": "speaker_video" },
+            "source": { "type": "string" },
+            "fit": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source", "kind"],
+          "properties": {
+            "type": { "const": "background" },
+            "source": { "type": "string" },
+            "kind": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "color"],
+          "properties": {
+            "type": { "const": "solid_color" },
+            "color": { "type": "string" }
+          }
+        }
+      ]
+    },
+
+    "TemplateLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "z_index", "visible", "locked", "content", "default_position"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "z_index": { "type": "integer" },
+        "visible": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "content": { "$ref": "#/$defs/LayerContent" },
+        "default_position": { "$ref": "#/$defs/LayerPosition" }
+      }
+    },
+
+    "LayerOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layer_id", "position", "note"],
+      "properties": {
+        "layer_id": { "type": "string" },
+        "position": { "$ref": "#/$defs/LayerPosition" },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+
+    "SafeZones": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_pct", "title_pct"],
+      "properties": {
+        "action_pct": { "type": "number" },
+        "title_pct": { "type": "number" }
+      }
+    },
+
+    "FormatLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format_name", "label", "width", "height", "aspect", "safe_zones", "overrides"],
+      "properties": {
+        "format_name": { "type": "string" },
+        "label": { "type": "string" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "aspect": { "type": "string" },
+        "safe_zones": { "$ref": "#/$defs/SafeZones" },
+        "overrides": { "type": "array", "items": { "$ref": "#/$defs/LayerOverride" } }
+      }
+    },
+
+    "TransitionDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "label", "duration_secs", "css_kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "label": { "type": "string" },
+        "duration_secs": { "type": "number" },
+        "css_kind": { "type": "string" }
+      }
+    },
+
+    "TransitionAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boundary_index", "segment_label", "transition_id"],
+      "properties": {
+        "boundary_index": { "type": "integer" },
+        "segment_label": { "type": "string" },
+        "transition_id": { "type": "string" }
+      }
+    },
+
+    "TemplateVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version", "label", "created_at", "author", "change_summary",
+        "used_by_episode_numbers", "is_current"
+      ],
+      "properties": {
+        "version": { "type": "integer" },
+        "label": { "type": "string" },
+        "created_at": { "type": "string" },
+        "author": { "type": "string" },
+        "change_summary": { "type": "string" },
+        "used_by_episode_numbers": { "type": "array", "items": { "type": "integer" } },
+        "is_current": { "type": "boolean" }
+      }
+    },
+
+    "CompositionTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "name", "campaign_id", "current_version", "layers",
+        "format_layouts", "transitions_available", "transition_assignments",
+        "versions"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "campaign_id": { "type": "string" },
+        "current_version": { "type": "integer" },
+        "layers": { "type": "array", "items": { "$ref": "#/$defs/TemplateLayer" } },
+        "format_layouts": { "type": "array", "items": { "$ref": "#/$defs/FormatLayout" } },
+        "transitions_available": { "type": "array", "items": { "$ref": "#/$defs/TransitionDef" } },
+        "transition_assignments": { "type": "array", "items": { "$ref": "#/$defs/TransitionAssignment" } },
+        "versions": { "type": "array", "items": { "$ref": "#/$defs/TemplateVersion" } }
+      }
+    },
+
+    "QAAutomatedCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "description", "passed", "measured", "threshold"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "passed": { "type": "boolean" },
+        "measured": { "type": "string" },
+        "threshold": { "type": "string" }
+      }
+    },
+
+    "QAManualCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "description", "target_stage", "initially_checked"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "target_stage": { "type": "string" },
+        "initially_checked": { "type": "boolean" }
+      }
+    },
+
+    "QAState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["automated_checks", "manual_checks", "minimum_manual_required"],
+      "properties": {
+        "automated_checks": { "type": "array", "items": { "$ref": "#/$defs/QAAutomatedCheck" } },
+        "manual_checks": { "type": "array", "items": { "$ref": "#/$defs/QAManualCheck" } },
+        "minimum_manual_required": { "type": "integer" }
+      }
+    },
+
+    "ScriptRole": {
+      "type": "string",
+      "enum": ["hook", "practical", "cta", "outro"]
+    },
+
+    "ScriptBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "speaker", "role", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "speaker": { "type": "string" },
+        "role": { "$ref": "#/$defs/ScriptRole" },
+        "text": { "type": "string" }
+      }
+    },
+
+    "ReviewedTake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "take_id", "speaker", "role", "source_kind", "accepted",
+        "duration_secs", "confidence", "notes"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "speaker": { "type": "string" },
+        "role": { "$ref": "#/$defs/ScriptRole" },
+        "source_kind": { "type": "string" },
+        "accepted": { "type": "boolean" },
+        "duration_secs": { "type": "number" },
+        "confidence": { "type": "number" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "AlignmentSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "take_id", "script_block_id", "text", "speaker",
+        "start_ms", "end_ms", "confidence"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "script_block_id": { "type": "string" },
+        "text": { "type": "string" },
+        "speaker": { "type": "string" },
+        "start_ms": { "type": "integer" },
+        "end_ms": { "type": "integer" },
+        "confidence": { "type": "number" }
+      }
+    },
+
+    "TimelineEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "role", "take_id", "start_secs", "duration_secs",
+        "trim_in_secs", "trim_out_secs", "transition_in", "transition_out",
+        "transition_duration_secs"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "$ref": "#/$defs/ScriptRole" },
+        "take_id": { "type": "string" },
+        "start_secs": { "type": "number" },
+        "duration_secs": { "type": "number" },
+        "trim_in_secs": { "type": "number" },
+        "trim_out_secs": { "type": "number" },
+        "transition_in": { "type": "string", "description": "cut | crossfade | dissolve" },
+        "transition_out": { "type": "string", "description": "cut | crossfade | dissolve" },
+        "transition_duration_secs": { "type": "number" }
+      }
+    },
+
+    "SubtitleCue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "start_secs", "end_secs", "text"],
+      "properties": {
+        "index": { "type": "integer" },
+        "start_secs": { "type": "number" },
+        "end_secs": { "type": "number" },
+        "text": { "type": "string" }
+      }
+    },
+
+    "RenderOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "codec", "width", "height", "fps", "aspect_ratio",
+        "target_lufs", "container"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "codec": { "type": "string" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "fps": { "type": "number" },
+        "aspect_ratio": { "type": "string" },
+        "target_lufs": { "type": "number" },
+        "container": { "type": "string" }
+      }
+    },
+
+    "RenderManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outputs"],
+      "properties": {
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/RenderOutput" } }
+      }
+    },
+
+    "TimelineSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entries", "subtitles", "total_duration_secs", "fps",
+        "resolution", "codec", "target_lufs", "manifest"
+      ],
+      "properties": {
+        "entries": { "type": "array", "items": { "$ref": "#/$defs/TimelineEntry" } },
+        "subtitles": { "type": "array", "items": { "$ref": "#/$defs/SubtitleCue" } },
+        "total_duration_secs": { "type": "number" },
+        "fps": { "type": "number" },
+        "resolution": { "type": "string" },
+        "codec": { "type": "string" },
+        "target_lufs": { "type": "number" },
+        "manifest": { "$ref": "#/$defs/RenderManifest" }
+      }
+    },
+
+    "DeliveryTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "url", "delivered_at"],
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "delivered_at": { "type": ["string", "null"] }
+      }
+    },
+
+    "ExportRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "export_id", "episode_id", "episode_number", "episode_slug",
+        "episode_title", "run_id", "status", "preset", "output_key",
+        "duration_secs", "file_size_bytes", "frame_count", "fps", "width",
+        "height", "lut_key", "avg_key_quality", "max_eye_drift_px",
+        "color_reference_take_id", "render_duration_ms", "rendered_at",
+        "delivery_targets"
+      ],
+      "properties": {
+        "export_id": { "type": "string" },
+        "episode_id": { "type": "string" },
+        "episode_number": { "type": "integer" },
+        "episode_slug": { "type": "string" },
+        "episode_title": { "type": "string" },
+        "run_id": { "type": "string" },
+        "status": { "type": "string" },
+        "preset": { "type": "string" },
+        "output_key": { "type": "string" },
+        "duration_secs": { "type": "number" },
+        "file_size_bytes": { "type": "integer" },
+        "frame_count": { "type": "integer" },
+        "fps": { "type": "number" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "lut_key": { "type": "string" },
+        "avg_key_quality": { "type": "number" },
+        "max_eye_drift_px": { "type": "number" },
+        "color_reference_take_id": { "type": "string" },
+        "render_duration_ms": { "type": "integer" },
+        "rendered_at": { "type": "string" },
+        "delivery_targets": { "type": "array", "items": { "$ref": "#/$defs/DeliveryTarget" } }
+      }
+    },
+
+    "ExportCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaign_id", "exports"],
+      "properties": {
+        "campaign_id": { "type": "string" },
+        "exports": { "type": "array", "items": { "$ref": "#/$defs/ExportRecord" } }
+      }
+    },
+
+    "StageName": {
+      "type": "string",
+      "description": "Canonical stage identifiers, in pipeline order.",
+      "enum": [
+        "semantic_frontend",
+        "extract_and_preview",
+        "audio_alignment",
+        "subtitles",
+        "render_intent",
+        "compositor",
+        "eye_alignment",
+        "color_grade",
+        "audio_master",
+        "export",
+        "qa"
+      ]
+    }
+  }
+}

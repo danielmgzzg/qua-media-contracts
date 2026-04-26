@@ -5,21 +5,16 @@ on:
     tags: ["v*"]
 
 jobs:
-  # ── npm → GitHub Packages ──────────────────────────────────────────────────
+  # ── npm → Cloudsmith ──────────────────────────────────────────────────────
   publish-npm:
-    name: Publish @qua/media-contracts to GitHub Packages
+    name: Publish @qua/media-contracts to Cloudsmith npm
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: https://npm.pkg.github.com
-          scope: "@qua"
 
       - name: Install JS deps
         run: cd packages/ts && npm ci
@@ -30,10 +25,13 @@ jobs:
       - name: Type-check generated types
         run: cd packages/ts && npx tsc --noEmit
 
+      - name: Configure Cloudsmith npm registry
+        run: |
+          npm set @qua:registry=https://npm.cloudsmith.io/${{ secrets.CS_ORG }}/${{ secrets.CS_REPO }}/
+          npm set //npm.cloudsmith.io/${{ secrets.CS_ORG }}/${{ secrets.CS_REPO }}/:_authToken=${{ secrets.CLOUDSMITH_API_KEY }}
+
       - name: Publish
         run: cd packages/ts && npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ── Cargo → Cloudsmith ────────────────────────────────────────────────────
   publish-cargo:
@@ -54,12 +52,8 @@ jobs:
           key: ${{ runner.os }}-cargo-publish-${{ hashFiles('crates/qua-media-contracts/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-publish-
 
-      # Bundle schemas into the crate directory so downstream build.rs can find them.
-      - name: Copy schemas into crate (for packaging)
-        run: cp -r schemas/v1 crates/qua-media-contracts/schemas/
-
-      - name: Package crate (--allow-dirty because schemas/ are copied but untracked)
-        run: cargo package --manifest-path crates/qua-media-contracts/Cargo.toml --allow-dirty
+      - name: Package crate
+        run: cargo package --manifest-path crates/qua-media-contracts/Cargo.toml
 
       - name: Install cloudsmith CLI
         run: pip install --quiet cloudsmith-cli
