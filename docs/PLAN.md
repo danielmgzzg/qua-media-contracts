@@ -332,7 +332,7 @@ client work. When staging is up: change the default in
 [`client/src/hooks/usePipeline.ts`](https://github.com/danielmgzzg/qua-media-ui/blob/main/client/src/hooks/usePipeline.ts)
 and document the inversion.
 
-### Phase 4 — Mock becomes a contract test fixture 🟡 PARTIAL
+### Phase 4 — Mock becomes a contract test fixture ✅ DONE
 
 Shape-level contract assertions are already in place via
 [`client/tests/e2e/ws-contract.spec.ts`](https://github.com/danielmgzzg/qua-media-ui/blob/main/client/tests/e2e/ws-contract.spec.ts):
@@ -340,14 +340,15 @@ snapshot arrives within 5s, all 11 stages present, continuous
 events post-snapshot, mid-session reconnect recovers. The suite
 gates the rest of the e2e run.
 
-**Still to land:** schema-driven validation — a Playwright fixture
-that captures every WS frame and validates each against the
-bundled `@qua/media-contracts/schemas/v1/ws/server.schema.json`
-via Ajv (with cross-file `$ref` resolution to `domain.schema.json`,
-the same trick the Rust `validate` feature uses). Wire that suite
-into `qua-media-rs` CI as the contract regression gate. This
-closes the migration loop — any drift in the real backend's
-output shape fails CI.
+**Landed:** schema-driven validation via
+[`client/tests/e2e/ws-schema-validation.spec.ts`](https://github.com/danielmgzzg/qua-media-ui/blob/main/client/tests/e2e/ws-schema-validation.spec.ts).
+Captures every inbound WS frame in a normal session and validates
+each against `@qua/media-contracts/schemas/v1/ws/server.schema.json`
+via Ajv 8 (draft-2020-12) with `domain.schema.json` registered as
+an auxiliary schema for cross-file `$ref` resolution. Two tests:
+`every inbound frame satisfies server.schema.json` and `snapshot
+frame has required top-level fields`. Both run in CI as part of
+the Playwright e2e suite.
 
 Once the real backend implements all messages, **don't delete the mock —
 promote it to a contract conformance harness.** Two purposes:
